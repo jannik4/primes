@@ -14,7 +14,7 @@ impl Plugin for LoadingPlugin {
 fn setup(mut commands: Commands, mut next_state: ResMut<NextState<AppState>>) {
     commands.spawn((GameCameraBundle::default(), StateScoped(AppState::Loading)));
 
-    let primes = Primes::build(2_500_000);
+    let primes = Primes::build(5_000_000);
     log::info!("Found {} primes", primes.primes().count());
     commands.insert_resource(primes);
 

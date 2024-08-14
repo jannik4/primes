@@ -4,6 +4,7 @@ const PI: f32 = 3.141592653589793;
 
 struct Globals {
     elapsed_seconds: f32,
+    zoom: f32,
 }
 
 @group(2) @binding(0)
@@ -11,8 +12,8 @@ var<uniform> globals: Globals;
 
 struct Vertex {
     @location(0) position: vec3<f32>,
-    // @location(1) normal: vec3<f32>,
-    // @location(2) uv: vec2<f32>,
+    @location(1) normal: vec3<f32>,
+    @location(2) uv: vec2<f32>,
 
     @location(3) i_prime: u32,
 };
@@ -32,13 +33,21 @@ fn gamma_function(value: f32) -> f32 {
     return pow((value + 0.055) / 1.055, 2.4); // gamma curve in other area
 }
 
+fn zoom_scale() -> f32 {
+    if globals.zoom > 0.0 {
+        return 1.0 / pow(1.5, globals.zoom);
+    }
+
+    return 1.0 / pow(1.75, globals.zoom);
+}
+
 @vertex
 fn vertex(vertex: Vertex) -> VertexOutput {
     let time = globals.elapsed_seconds;
 
     let prime = f32(vertex.i_prime);
 
-    let scale = 0.2 + 1.0 * (sin(2.0 * time + prime * 0.1) + 1.0) / 2.0;
+    let scale = (0.2 + (sin(2.0 * time + prime * 0.1) + 1.0) / 2.0) * zoom_scale(); // * (1.0 + 0.00002 * prime)
     let color = vec4<f32>(
         gamma_function(1.5 + 0.5 * (sin(1.0 * time + prime * 0.0008) + 1.0) / 2.0),
         gamma_function(1.5),

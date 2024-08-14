@@ -8,7 +8,6 @@ mod loading;
 mod primes;
 mod splash_screen;
 
-#[cfg(feature = "dev")]
 mod dev;
 
 use bevy::prelude::*;
@@ -54,7 +53,6 @@ pub fn build_app() -> App {
         splash_screen::SplashScreenPlugin,
         loading::LoadingPlugin,
         game::GamePlugin,
-        #[cfg(feature = "dev")]
         dev::DevPlugin,
     ));
 

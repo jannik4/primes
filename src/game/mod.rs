@@ -67,8 +67,8 @@ struct Zoom {
 impl Default for Zoom {
     fn default() -> Self {
         Self {
-            current: 1.0,
-            target: 1.0,
+            current: 0.0,
+            target: 0.0,
         }
     }
 }
@@ -84,16 +84,9 @@ fn zoom(
     };
 
     zoom.target = match () {
-        _ if input.just_pressed(KeyCode::Digit1) => 4.0,
-        _ if input.just_pressed(KeyCode::Digit2) => 3.0,
-        _ if input.just_pressed(KeyCode::Digit3) => 2.0,
-        _ if input.just_pressed(KeyCode::Digit4) => 1.0,
-        _ if input.just_pressed(KeyCode::Digit5) => 0.0,
-        _ if input.just_pressed(KeyCode::Digit6) => -1.0,
-        _ if input.just_pressed(KeyCode::Digit7) => -2.0,
-        _ if input.just_pressed(KeyCode::Digit8) => -3.0,
-        _ if input.just_pressed(KeyCode::Digit9) => -4.0,
-        _ if input.just_pressed(KeyCode::Digit0) => -5.0,
+        _ if input.just_pressed(KeyCode::Space) => 0.0,
+        _ if input.just_pressed(KeyCode::ArrowUp) => f32::min(10.0, zoom.target + 1.0),
+        _ if input.just_pressed(KeyCode::ArrowDown) => f32::max(-6.0, zoom.target - 1.0),
         _ => zoom.target,
     };
     zoom.current = f32::lerp(
@@ -169,7 +162,7 @@ fn setup(mut commands: Commands, assets: Res<GameAssets>, primes: Res<Primes>) {
     // }
 
     commands.spawn((
-        assets.circle2.clone(),
+        assets.circle.clone(),
         SpatialBundle::INHERITED_IDENTITY,
         InstanceMaterialData::from_iter(primes.primes()),
         NoFrustumCulling,

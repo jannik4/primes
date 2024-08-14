@@ -26,7 +26,7 @@ use bevy::{
 };
 use bytemuck::{Pod, Zeroable};
 
-use super::GameTime;
+use super::{GameTime, Zoom};
 
 #[derive(Component, Deref)]
 pub struct InstanceMaterialData(Vec<InstanceData>);
@@ -151,13 +151,22 @@ fn prepare_instance_buffers(
 #[repr(C)]
 struct Globals {
     elapsed_seconds: f32,
+    zoom: f32,
 }
 
-fn extract_globals(mut commands: Commands, game_time: Extract<Option<Res<GameTime>>>) {
+fn extract_globals(
+    mut commands: Commands,
+    game_time: Extract<Option<Res<GameTime>>>,
+    zoom: Extract<Option<Res<Zoom>>>,
+) {
     commands.insert_resource(Globals {
         elapsed_seconds: match game_time.as_ref() {
             Some(game_time) => game_time.elapsed.as_secs_f32(),
             None => 0.0,
+        },
+        zoom: match zoom.as_ref() {
+            Some(zoom) => zoom.current,
+            None => 1.0,
         },
     });
 }
@@ -175,7 +184,7 @@ impl FromWorld for GlobalsGpuData {
 
         let buffer = render_device.create_buffer(&BufferDescriptor {
             label: Some("globals buffer"),
-            size: std::mem::size_of::<InstanceData>() as u64,
+            size: std::mem::size_of::<Globals>() as u64,
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });

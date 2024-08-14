@@ -59,7 +59,7 @@ fn load_assets(
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) -> GameAssets {
     GameAssets {
-        circle: meshes.add(RegularPolygon::new(1.0, 6)).into(),
+        circle: meshes.add(RegularPolygon::new(1.0, 16)).into(),
         circle2: meshes
             .add({
                 const RESOLUTION: usize = 6;
