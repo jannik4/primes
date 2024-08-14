@@ -2,13 +2,12 @@
 
 mod assets;
 mod camera;
+mod dev;
 mod full_screen;
 mod game;
 mod loading;
 mod primes;
 mod splash_screen;
-
-mod dev;
 
 use bevy::prelude::*;
 use bevy_asset_loader::loading_state::{LoadingState, LoadingStateAppExt};
