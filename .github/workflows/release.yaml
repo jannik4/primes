@@ -45,7 +45,7 @@ jobs:
         run: |
           wasm-bindgen --no-typescript --out-name bevy_game --out-dir wasm --target web target/wasm32-unknown-unknown/release-wasm/${{ env.binary }}.wasm
           wasm-opt -Os -o wasm/bevy_game_bg.wasm wasm/bevy_game_bg.wasm
-          cp -r -L assets wasm/ || true # Try to copy, but ignore if it can't copy if source directory does not exist
+          cp -r assets wasm/ || true # Try to copy, but ignore if it can't copy if source directory does not exist
 
       - name: Package as a zip
         working-directory: ./wasm
@@ -53,7 +53,7 @@ jobs:
           zip --recurse-paths ../${{ env.binary }}.zip .
 
       - name: Upload binaries to artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-pages-artifact@v3
         with:
           path: wasm
           name: wasm
@@ -100,13 +100,6 @@ jobs:
         run: |
           zip --recurse-paths ../${{ env.binary }}.zip .
 
-      - name: Upload binaries to artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          path: ${{ env.binary }}.zip
-          name: linux
-          retention-days: 1
-
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
@@ -144,13 +137,6 @@ jobs:
       - name: Package as a zip
         run: |
           Compress-Archive -Path windows/* -DestinationPath ${{ env.binary }}.zip
-
-      - name: Upload binaries to artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          path: ${{ env.binary }}.zip
-          name: windows
-          retention-days: 1
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
@@ -190,13 +176,6 @@ jobs:
           cp -r assets ${{ env.binary }}.app/Contents/MacOS/ || true # Try to copy, but ignore if it can't copy if source directory does not exist
           hdiutil create -fs HFS+ -volname "${{ env.binary }}" -srcfolder ${{ env.binary }}.app ${{ env.binary }}-macOS-intel.dmg
 
-      - name: Upload binaries to artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          path: ${{ env.binary }}-macOS-intel.dmg
-          name: macOS-intel
-          retention-days: 1
-
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
@@ -234,13 +213,6 @@ jobs:
           cp target/aarch64-apple-darwin/release/${{ env.binary }} ${{ env.binary }}.app/Contents/MacOS/
           cp -r assets ${{ env.binary }}.app/Contents/MacOS/ || true # Try to copy, but ignore if it can't copy if source directory does not exist
           hdiutil create -fs HFS+ -volname "${{ env.binary }}-macOS-apple-silicon" -srcfolder ${{ env.binary }}.app ${{ env.binary }}-macOS-apple-silicon.dmg
-
-      - name: Upload binaries to artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          path: ${{ env.binary }}-macOS-apple-silicon.dmg
-          name: macOS-apple-silicon
-          retention-days: 1
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
