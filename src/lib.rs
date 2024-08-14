@@ -19,9 +19,6 @@ pub fn build_app() -> App {
     app.add_plugins(
         DefaultPlugins
             .set(AssetPlugin {
-                // Wasm builds will check for meta files (that don't exist) if this isn't set.
-                // This causes errors and even panics in web builds on itch.
-                // See https://github.com/bevyengine/bevy_github_ci_template/issues/48.
                 #[cfg(target_arch = "wasm32")]
                 meta_check: bevy::asset::AssetMetaCheck::Never,
                 ..default()

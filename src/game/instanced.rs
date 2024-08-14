@@ -1,3 +1,4 @@
+use super::{GameTime, Zoom};
 use bevy::{
     core_pipeline::core_2d::Transparent2d,
     ecs::{
@@ -25,15 +26,20 @@ use bevy::{
     },
 };
 use bytemuck::{Pod, Zeroable};
+use std::sync::{Arc, OnceLock};
 
-use super::{GameTime, Zoom};
-
-#[derive(Component, Deref)]
-pub struct InstanceMaterialData(Vec<InstanceData>);
+#[derive(Component)]
+pub struct InstanceMaterialData {
+    data: Arc<Vec<InstanceData>>,
+    buffer: Arc<OnceLock<InstanceBuffer>>,
+}
 
 impl InstanceMaterialData {
     pub fn from_iter<I: IntoIterator<Item = u32>>(iter: I) -> Self {
-        Self(iter.into_iter().map(InstanceData).collect())
+        Self {
+            data: Arc::new(iter.into_iter().map(InstanceData).collect()),
+            buffer: Arc::new(OnceLock::new()),
+        }
     }
 }
 
@@ -43,7 +49,10 @@ impl ExtractComponent for InstanceMaterialData {
     type Out = Self;
 
     fn extract_component(item: QueryItem<'_, Self::QueryData>) -> Option<Self> {
-        Some(InstanceMaterialData(item.0.clone()))
+        Some(InstanceMaterialData {
+            data: Arc::clone(&item.data),
+            buffer: Arc::clone(&item.buffer),
+        })
     }
 }
 
@@ -123,26 +132,23 @@ fn queue_custom(
     }
 }
 
-#[derive(Component)]
 struct InstanceBuffer {
     buffer: Buffer,
     length: usize,
 }
 
 fn prepare_instance_buffers(
-    mut commands: Commands,
     query: Query<(Entity, &InstanceMaterialData)>,
     render_device: Res<RenderDevice>,
 ) {
-    for (entity, instance_data) in &query {
-        let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
-            label: Some("instance data buffer"),
-            contents: bytemuck::cast_slice(instance_data.as_slice()),
-            usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
-        });
-        commands.entity(entity).insert(InstanceBuffer {
-            buffer,
-            length: instance_data.len(),
+    for (_entity, instance_data) in &query {
+        instance_data.buffer.get_or_init(|| InstanceBuffer {
+            buffer: render_device.create_buffer_with_data(&BufferInitDescriptor {
+                label: Some("instance data buffer"),
+                contents: bytemuck::cast_slice(instance_data.data.as_slice()),
+                usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
+            }),
+            length: instance_data.data.len(),
         });
     }
 }
@@ -290,13 +296,13 @@ impl<P: PhaseItem> RenderCommand<P> for DrawMeshInstanced {
         SRes<RenderMesh2dInstances>,
     );
     type ViewQuery = ();
-    type ItemQuery = Read<InstanceBuffer>;
+    type ItemQuery = Read<InstanceMaterialData>;
 
     #[inline]
     fn render<'w>(
         item: &P,
         _view: (),
-        instance_buffer: Option<&'w InstanceBuffer>,
+        instance_material_data: Option<&'w InstanceMaterialData>,
         (globals, meshes, render_mesh_instances): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
@@ -307,9 +313,10 @@ impl<P: PhaseItem> RenderCommand<P> for DrawMeshInstanced {
         let Some(gpu_mesh) = meshes.into_inner().get(mesh_instance.mesh_asset_id) else {
             return RenderCommandResult::Failure;
         };
-        let Some(instance_buffer) = instance_buffer else {
+        let Some(instance_material_data) = instance_material_data else {
             return RenderCommandResult::Failure;
         };
+        let instance_buffer = instance_material_data.buffer.get().unwrap();
 
         pass.set_vertex_buffer(0, gpu_mesh.vertex_buffer.slice(..));
         pass.set_vertex_buffer(1, instance_buffer.buffer.slice(..));
