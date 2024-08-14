@@ -6,9 +6,9 @@ pub struct Primes {
 }
 
 impl Primes {
-    pub fn build(count: u32) -> Self {
+    pub fn build(max: u32) -> Self {
         Self {
-            primes: (0..count).filter(|n| is_prime(*n)).collect(),
+            primes: (0..=max).filter(|n| is_prime(*n)).collect(),
         }
     }
 
