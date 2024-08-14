@@ -1,5 +1,10 @@
 use crate::AssetsState;
-use bevy::{ecs::system::RunSystemOnce, prelude::*, sprite::Mesh2dHandle};
+use bevy::{
+    ecs::system::RunSystemOnce,
+    prelude::*,
+    render::{mesh::PrimitiveTopology, render_asset::RenderAssetUsages},
+    sprite::Mesh2dHandle,
+};
 use bevy_asset_loader::prelude::*;
 
 pub struct GameAssetsPlugin;
@@ -20,6 +25,7 @@ pub struct AudioAssets {}
 #[derive(Debug, Resource)]
 pub struct GameAssets {
     pub circle: Mesh2dHandle,
+    pub circle2: Mesh2dHandle,
     pub circle_material: Handle<ColorMaterial>,
 
     pub star_mesh: Mesh2dHandle,
@@ -53,7 +59,22 @@ fn load_assets(
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) -> GameAssets {
     GameAssets {
-        circle: meshes.add(RegularPolygon::new(1.2, 6)).into(),
+        circle: meshes.add(RegularPolygon::new(1.0, 6)).into(),
+        circle2: meshes
+            .add({
+                const RESOLUTION: usize = 6;
+                let circle = (0..=RESOLUTION)
+                    .map(|i| {
+                        let angle = i as f32 * std::f32::consts::TAU / RESOLUTION as f32;
+                        let (x, y) = angle.sin_cos();
+                        Vec3::new(x, y, 0.0).to_array()
+                    })
+                    .collect::<Vec<_>>();
+
+                Mesh::new(PrimitiveTopology::LineStrip, RenderAssetUsages::default())
+                    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, circle)
+            })
+            .into(),
         circle_material: materials.add(Color::srgb(2.0, 1.5, 1.5)),
 
         star_mesh: meshes.add(Circle::new(16.0)).into(),

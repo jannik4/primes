@@ -5,7 +5,6 @@ use bevy::{
         system::{lifetimeless::*, SystemParamItem},
     },
     math::FloatOrd,
-    pbr::{RenderMeshInstances, SetMeshBindGroup, SetMeshViewBindGroup},
     prelude::*,
     render::{
         extract_component::{ExtractComponent, ExtractComponentPlugin},
@@ -16,9 +15,9 @@ use bevy::{
             RenderCommandResult, SetItemPipeline, TrackedRenderPass, ViewSortedRenderPhases,
         },
         render_resource::*,
-        renderer::RenderDevice,
+        renderer::{RenderDevice, RenderQueue},
         view::ExtractedView,
-        Render, RenderApp, RenderSet,
+        Extract, Render, RenderApp, RenderSet,
     },
     sprite::{
         Mesh2dPipeline, Mesh2dPipelineKey, RenderMesh2dInstances, SetMesh2dBindGroup,
@@ -26,6 +25,8 @@ use bevy::{
     },
 };
 use bytemuck::{Pod, Zeroable};
+
+use super::GameTime;
 
 #[derive(Component, Deref)]
 pub struct InstanceMaterialData(Vec<InstanceData>);
@@ -54,17 +55,21 @@ impl Plugin for InstancedPlugin {
         app.sub_app_mut(RenderApp)
             .add_render_command::<Transparent2d, DrawCustom>()
             .init_resource::<SpecializedMeshPipelines<CustomPipeline>>()
+            .add_systems(ExtractSchedule, extract_globals)
             .add_systems(
                 Render,
                 (
                     queue_custom.in_set(RenderSet::QueueMeshes),
                     prepare_instance_buffers.in_set(RenderSet::PrepareResources),
+                    prepare_gpu_data.in_set(RenderSet::PrepareResources),
                 ),
             );
     }
 
     fn finish(&self, app: &mut App) {
-        app.sub_app_mut(RenderApp).init_resource::<CustomPipeline>();
+        app.sub_app_mut(RenderApp)
+            .init_resource::<CustomPipeline>()
+            .init_resource::<GlobalsGpuData>();
     }
 }
 
@@ -142,19 +147,91 @@ fn prepare_instance_buffers(
     }
 }
 
+#[derive(Resource, Clone, Copy, Pod, Zeroable)]
+#[repr(C)]
+struct Globals {
+    elapsed_seconds: f32,
+}
+
+fn extract_globals(mut commands: Commands, game_time: Extract<Option<Res<GameTime>>>) {
+    commands.insert_resource(Globals {
+        elapsed_seconds: match game_time.as_ref() {
+            Some(game_time) => game_time.elapsed.as_secs_f32(),
+            None => 0.0,
+        },
+    });
+}
+
+#[derive(Resource)]
+struct GlobalsGpuData {
+    buffer: Buffer,
+    bind_group: BindGroup,
+}
+
+impl FromWorld for GlobalsGpuData {
+    fn from_world(world: &mut World) -> Self {
+        let render_device = world.resource::<RenderDevice>();
+        let custom_pipeline = world.resource::<CustomPipeline>();
+
+        let buffer = render_device.create_buffer(&BufferDescriptor {
+            label: Some("globals buffer"),
+            size: std::mem::size_of::<InstanceData>() as u64,
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let bind_group = render_device.create_bind_group(
+            "globals bind group",
+            &custom_pipeline.globals_layout,
+            &[BindGroupEntry {
+                binding: 0,
+                resource: BindingResource::Buffer(buffer.as_entire_buffer_binding()),
+            }],
+        );
+
+        Self { buffer, bind_group }
+    }
+}
+
+fn prepare_gpu_data(
+    globals: Res<Globals>,
+    globals_gpu_data: Res<GlobalsGpuData>,
+    render_queue: Res<RenderQueue>,
+) {
+    render_queue.write_buffer(
+        &globals_gpu_data.buffer,
+        0,
+        bytemuck::cast_slice(&[*globals]),
+    );
+}
+
 #[derive(Resource)]
 struct CustomPipeline {
     shader: Handle<Shader>,
     mesh_pipeline: Mesh2dPipeline,
+    globals_layout: BindGroupLayout,
 }
 
 impl FromWorld for CustomPipeline {
     fn from_world(world: &mut World) -> Self {
+        let render_device = world.resource::<RenderDevice>();
         let mesh_pipeline = world.resource::<Mesh2dPipeline>();
 
         CustomPipeline {
             shader: world.load_asset("shader.wgsl"),
             mesh_pipeline: mesh_pipeline.clone(),
+            globals_layout: render_device.create_bind_group_layout(
+                "globals layout",
+                &[BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: ShaderStages::VERTEX,
+                    ty: BindingType::Buffer {
+                        ty: BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            ),
         }
     }
 }
@@ -171,6 +248,8 @@ impl SpecializedMeshPipeline for CustomPipeline {
 
         descriptor.vertex.shader = self.shader.clone();
         descriptor.fragment.as_mut().unwrap().shader = self.shader.clone();
+
+        descriptor.layout.insert(2, self.globals_layout.clone());
 
         descriptor.vertex.buffers.push(VertexBufferLayout {
             array_stride: std::mem::size_of::<InstanceData>() as u64,
@@ -196,7 +275,11 @@ type DrawCustom = (
 struct DrawMeshInstanced;
 
 impl<P: PhaseItem> RenderCommand<P> for DrawMeshInstanced {
-    type Param = (SRes<RenderAssets<GpuMesh>>, SRes<RenderMesh2dInstances>);
+    type Param = (
+        SRes<GlobalsGpuData>,
+        SRes<RenderAssets<GpuMesh>>,
+        SRes<RenderMesh2dInstances>,
+    );
     type ViewQuery = ();
     type ItemQuery = Read<InstanceBuffer>;
 
@@ -205,9 +288,10 @@ impl<P: PhaseItem> RenderCommand<P> for DrawMeshInstanced {
         item: &P,
         _view: (),
         instance_buffer: Option<&'w InstanceBuffer>,
-        (meshes, render_mesh_instances): SystemParamItem<'w, '_, Self::Param>,
+        (globals, meshes, render_mesh_instances): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
+        let globals = globals.into_inner();
         let Some(mesh_instance) = render_mesh_instances.get(&item.entity()) else {
             return RenderCommandResult::Failure;
         };
@@ -220,6 +304,8 @@ impl<P: PhaseItem> RenderCommand<P> for DrawMeshInstanced {
 
         pass.set_vertex_buffer(0, gpu_mesh.vertex_buffer.slice(..));
         pass.set_vertex_buffer(1, instance_buffer.buffer.slice(..));
+
+        pass.set_bind_group(2, &globals.bind_group, &[]);
 
         match &gpu_mesh.buffer_info {
             GpuBufferInfo::Indexed {

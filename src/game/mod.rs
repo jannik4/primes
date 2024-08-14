@@ -114,23 +114,24 @@ fn update(mut gizmos: Gizmos, primes: Res<Primes>, game_time: Res<GameTime>) {
     });
 
     let elapsed_seconds = game_time.elapsed.as_secs_f32();
+    // LinearRgba::from(Color::srgb(red, green, blue));
 
-    for prime in primes.primes().skip(1000) {
-        let angle = prime as f32 % TAU;
-        let position = Vec3::new(
-            prime as f32 * f32::cos(angle - 0.002 * elapsed_seconds) / 50.0,
-            prime as f32 * f32::sin(angle - 0.002 * elapsed_seconds) / 50.0,
-            0.0,
-        );
-
-        let radius = 0.2 + 1.0 * (f32::sin(2.0 * elapsed_seconds + prime as f32 * 0.1) + 1.0) / 2.0;
-        let color = Color::srgb(
-            1.5 + 0.5 * (f32::sin(1.0 * elapsed_seconds + prime as f32 * 0.0008) + 1.0) / 2.0,
-            1.5,
-            1.5 + (1.0 / prime as f32).powf(0.2),
-        );
-        gizmos.linestrip(circle.into_iter().map(|pos| position + radius * pos), color);
-    }
+    // for prime in primes.primes() {
+    //     let angle = prime as f32 % TAU;
+    //     let position = Vec3::new(
+    //         prime as f32 * f32::cos(angle - 0.002 * elapsed_seconds) / 50.0,
+    //         prime as f32 * f32::sin(angle - 0.002 * elapsed_seconds) / 50.0,
+    //         0.0,
+    //     );
+    //
+    //     let radius = 0.2 + 1.0 * (f32::sin(2.0 * elapsed_seconds + prime as f32 * 0.1) + 1.0) / 2.0;
+    //     let color = Color::srgb(
+    //         1.5 + 0.5 * (f32::sin(1.0 * elapsed_seconds + prime as f32 * 0.0008) + 1.0) / 2.0,
+    //         1.5,
+    //         1.5 + (1.0 / prime as f32).powf(0.2),
+    //     );
+    //     gizmos.linestrip(circle.into_iter().map(|pos| position + radius * pos), color);
+    // }
 }
 
 fn setup(mut commands: Commands, assets: Res<GameAssets>, primes: Res<Primes>) {
@@ -168,7 +169,7 @@ fn setup(mut commands: Commands, assets: Res<GameAssets>, primes: Res<Primes>) {
     // }
 
     commands.spawn((
-        assets.circle.clone(),
+        assets.circle2.clone(),
         SpatialBundle::INHERITED_IDENTITY,
         InstanceMaterialData::from_iter(primes.primes()),
         NoFrustumCulling,
