@@ -158,6 +158,7 @@ fn prepare_instance_buffers(
 struct Globals {
     elapsed_seconds: f32,
     zoom: f32,
+    _padding: [u32; 2],
 }
 
 fn extract_globals(
@@ -174,6 +175,7 @@ fn extract_globals(
             Some(zoom) => zoom.current,
             None => 1.0,
         },
+        _padding: [0; 2],
     });
 }
 
