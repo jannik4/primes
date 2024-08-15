@@ -50,7 +50,7 @@ fn splash_screen(
     if **assets_state == AssetsState::Loaded
         && (splash_screen.timer.finished() || splash_screen.clicked)
     {
-        next_state.set(AppState::Loading);
+        next_state.set(AppState::Game);
     }
 }
 

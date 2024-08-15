@@ -28,6 +28,32 @@ use bevy::{
 use bytemuck::{Pod, Zeroable};
 use std::sync::{Arc, OnceLock};
 
+pub struct InstancedPlugin;
+
+impl Plugin for InstancedPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugins(ExtractComponentPlugin::<InstanceMaterialData>::default());
+        app.sub_app_mut(RenderApp)
+            .add_render_command::<Transparent2d, DrawCustom>()
+            .init_resource::<SpecializedMeshPipelines<CustomPipeline>>()
+            .add_systems(ExtractSchedule, extract_globals)
+            .add_systems(
+                Render,
+                (
+                    queue_custom.in_set(RenderSet::QueueMeshes),
+                    prepare_instance_buffers.in_set(RenderSet::PrepareResources),
+                    prepare_gpu_data.in_set(RenderSet::PrepareResources),
+                ),
+            );
+    }
+
+    fn finish(&self, app: &mut App) {
+        app.sub_app_mut(RenderApp)
+            .init_resource::<CustomPipeline>()
+            .init_resource::<GlobalsGpuData>();
+    }
+}
+
 #[derive(Component)]
 pub struct InstanceMaterialData {
     data: Arc<Vec<InstanceData>>,
@@ -53,32 +79,6 @@ impl ExtractComponent for InstanceMaterialData {
             data: Arc::clone(&item.data),
             buffer: Arc::clone(&item.buffer),
         })
-    }
-}
-
-pub struct InstancedPlugin;
-
-impl Plugin for InstancedPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(ExtractComponentPlugin::<InstanceMaterialData>::default());
-        app.sub_app_mut(RenderApp)
-            .add_render_command::<Transparent2d, DrawCustom>()
-            .init_resource::<SpecializedMeshPipelines<CustomPipeline>>()
-            .add_systems(ExtractSchedule, extract_globals)
-            .add_systems(
-                Render,
-                (
-                    queue_custom.in_set(RenderSet::QueueMeshes),
-                    prepare_instance_buffers.in_set(RenderSet::PrepareResources),
-                    prepare_gpu_data.in_set(RenderSet::PrepareResources),
-                ),
-            );
-    }
-
-    fn finish(&self, app: &mut App) {
-        app.sub_app_mut(RenderApp)
-            .init_resource::<CustomPipeline>()
-            .init_resource::<GlobalsGpuData>();
     }
 }
 

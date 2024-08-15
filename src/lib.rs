@@ -5,7 +5,6 @@ mod camera;
 mod dev;
 mod full_screen;
 mod game;
-mod loading;
 mod primes;
 mod splash_screen;
 
@@ -47,7 +46,6 @@ pub fn build_app() -> App {
         assets::GameAssetsPlugin,
         full_screen::FullScreenPlugin,
         splash_screen::SplashScreenPlugin,
-        loading::LoadingPlugin,
         game::GamePlugin,
         dev::DevPlugin,
     ));
@@ -59,7 +57,6 @@ pub fn build_app() -> App {
 enum AppState {
     #[default]
     SplashScreen,
-    Loading,
     Game,
 }
 

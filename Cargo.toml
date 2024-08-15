@@ -7,6 +7,9 @@ edition = "2021"
 bevy = "0.14"
 bevy_asset_loader = { version = "0.21.0", default-features = false }
 iyes_perf_ui = { version = "0.3.0" }
+bytemuck = { version = "1.16.3", features = ["extern_crate_std"] }
+
+[build-dependencies]
 bytemuck = "1.16.3"
 
 [profile.dev]

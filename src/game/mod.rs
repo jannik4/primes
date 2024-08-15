@@ -1,6 +1,6 @@
 mod instanced;
 
-use crate::{assets::GameAssets, camera::GameCameraBundle, primes::Primes, AppState};
+use crate::{assets::GameAssets, camera::GameCameraBundle, AppState};
 use bevy::{prelude::*, render::view::NoFrustumCulling};
 use instanced::InstanceMaterialData;
 use std::time::Duration;
@@ -97,7 +97,7 @@ fn zoom(
     projection.scale = 1.0 / f32::powf(2.0, zoom.current);
 }
 
-fn setup(mut commands: Commands, assets: Res<GameAssets>, primes: Res<Primes>) {
+fn setup(mut commands: Commands, assets: Res<GameAssets>) {
     commands.spawn((GameCameraBundle::default(), StateScoped(AppState::Game)));
     commands.init_resource::<GameTime>();
     commands.init_resource::<Zoom>();
@@ -105,7 +105,7 @@ fn setup(mut commands: Commands, assets: Res<GameAssets>, primes: Res<Primes>) {
     commands.spawn((
         assets.circle.clone(),
         SpatialBundle::INHERITED_IDENTITY,
-        InstanceMaterialData::from_iter(primes.primes()),
+        InstanceMaterialData::from_iter(assets.primes.primes().iter().copied()),
         NoFrustumCulling,
     ));
 }

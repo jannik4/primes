@@ -1,6 +1,6 @@
-use bevy::prelude::*;
+#![allow(dead_code)] // module is used in this crate and in the build script
 
-#[derive(Debug, Clone, Resource)]
+#[derive(Debug, Clone)]
 pub struct Primes {
     primes: Vec<u32>,
 }
@@ -12,8 +12,12 @@ impl Primes {
         }
     }
 
-    pub fn primes(&self) -> impl Iterator<Item = u32> + '_ {
-        self.primes.iter().cloned()
+    pub fn from_unchecked(primes: Vec<u32>) -> Self {
+        Self { primes }
+    }
+
+    pub fn primes(&self) -> &[u32] {
+        &self.primes
     }
 }
 
