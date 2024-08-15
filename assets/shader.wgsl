@@ -5,6 +5,7 @@ const PI: f32 = 3.141592653589793;
 struct Globals {
     elapsed_seconds: f32,
     zoom: f32,
+    _padding: array<u32, 2>,
 }
 
 @group(2) @binding(0)
