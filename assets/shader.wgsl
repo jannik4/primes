@@ -49,7 +49,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     let prime = f32(vertex.i_prime);
 
-    let scale = (0.2 + (sin(2.0 * time + prime * 0.1) + 1.0) / 2.0) * zoom_scale() * (1.0 + 0.0000001 * prime);
+    let scale = 0.1 * (0.2 + (sin(2.0 * time + prime * 0.1) + 1.0) / 2.0) * zoom_scale() * (1.0 + 0.0000001 * prime);
     let color = vec4<f32>(
         gamma_function(1.5 + 0.5 * (sin(1.0 * time + prime * 0.0008) + 1.0) / 2.0),
         gamma_function(1.5),
@@ -59,8 +59,8 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     let angle = prime % (PI * 2.0);
     let position = scale * vertex.position + vec3<f32>(
-        prime * cos(angle - 0.002 * time) / 50.0,
-        prime * sin(angle - 0.002 * time) / 50.0,
+        prime * cos(angle - 0.002 * time) / 500.0,
+        prime * sin(angle - 0.002 * time) / 500.0,
         0.0,
     );
 
