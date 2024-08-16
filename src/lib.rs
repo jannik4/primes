@@ -28,6 +28,12 @@ pub enum Args {
 }
 
 impl Args {
+    #[cfg(target_arch = "wasm32")]
+    pub fn from_env() -> Self {
+        Self::Run
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn from_env() -> Self {
         let mut args = pico_args::Arguments::from_env();
         match args.subcommand().unwrap().as_deref() {
