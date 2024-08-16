@@ -5,6 +5,7 @@ zoom_levels=(0 1 4 -1 -2 -6)
 
 # Array of resolutions
 resolutions=(
+  "800 400"
   "1920 1080"
   "3440 1440"
   "1080 1920"
