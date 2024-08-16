@@ -6,7 +6,7 @@ With some, hopefully, visually pleasing animations.
 Inspired by [this video](https://www.youtube.com/watch?v=EK32jo7i5LQ) by 3Blue1Brown.
 
 <p align="center">
-  <img src="./screenshots/primes_800x400_5600_0.png" alt="Primes"/>
+  <img src="./primes_800x400_5600_0.png" alt="Primes"/>
 </p>
 
 ## License
