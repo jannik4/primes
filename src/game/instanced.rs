@@ -26,7 +26,10 @@ use bevy::{
     },
 };
 use bytemuck::{Pod, Zeroable};
-use std::sync::{Arc, OnceLock};
+use std::{
+    f32::consts::TAU,
+    sync::{Arc, OnceLock},
+};
 
 pub struct InstancedPlugin;
 
@@ -63,7 +66,11 @@ pub struct InstanceMaterialData {
 impl InstanceMaterialData {
     pub fn from_iter<I: IntoIterator<Item = u32>>(iter: I) -> Self {
         Self {
-            data: Arc::new(iter.into_iter().map(InstanceData).collect()),
+            data: Arc::new(
+                iter.into_iter()
+                    .map(|prime| InstanceData(prime, prime as f32 % TAU))
+                    .collect(),
+            ),
             buffer: Arc::new(OnceLock::new()),
         }
     }
@@ -84,7 +91,7 @@ impl ExtractComponent for InstanceMaterialData {
 
 #[derive(Clone, Copy, Pod, Zeroable)]
 #[repr(C)]
-pub struct InstanceData(u32);
+pub struct InstanceData(u32, f32);
 
 fn queue_custom(
     transparent_2d_draw_functions: Res<DrawFunctions<Transparent2d>>,
@@ -271,11 +278,18 @@ impl SpecializedMeshPipeline for CustomPipeline {
         descriptor.vertex.buffers.push(VertexBufferLayout {
             array_stride: std::mem::size_of::<InstanceData>() as u64,
             step_mode: VertexStepMode::Instance,
-            attributes: vec![VertexAttribute {
-                format: VertexFormat::Uint32,
-                offset: 0,
-                shader_location: 3, // shader locations 0-2 are taken up by Position, Normal and UV attributes
-            }],
+            attributes: vec![
+                VertexAttribute {
+                    format: VertexFormat::Uint32,
+                    offset: 0,
+                    shader_location: 3, // shader locations 0-2 are taken up by Position, Normal and UV attributes
+                },
+                VertexAttribute {
+                    format: VertexFormat::Float32,
+                    offset: 4,
+                    shader_location: 4,
+                },
+            ],
         });
 
         Ok(descriptor)

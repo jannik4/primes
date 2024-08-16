@@ -18,6 +18,7 @@ struct Vertex {
     @location(2) uv: vec2<f32>,
 
     @location(3) i_prime: u32,
+    @location(4) i_angle: f32,
 };
 
 struct VertexOutput {
@@ -48,6 +49,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let time = globals.elapsed_seconds;
 
     let prime = f32(vertex.i_prime);
+    let angle = vertex.i_angle;
 
     let scale = 0.1 * (0.2 + (sin(2.0 * time + prime * 0.1) + 1.0) / 2.0) * zoom_scale() * (1.0 + 0.0000001 * prime);
     let color = vec4<f32>(
@@ -57,7 +59,6 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         1.0,
     );
 
-    let angle = prime % (PI * 2.0);
     let position = scale * vertex.position + vec3<f32>(
         prime * cos(angle - 0.002 * time) / 500.0,
         prime * sin(angle - 0.002 * time) / 500.0,
