@@ -14,7 +14,7 @@ env:
 jobs:
   # Make screenshots
   release-screenshots:
-    runs-on: macOS-latest
+    runs-on: windows-latest
 
     steps:
       - uses: olegtarasov/get-tag@v2.1.2
@@ -31,15 +31,12 @@ jobs:
       - name: Make screenshots
         env:
           GAME_VERSION: ${{ steps.get_version.outputs.tag }}
-        run: |
-          chmod +x ./make_screenshots.sh
-          ./make_screenshots.sh
+        run: ./make_screenshots.sh
         shell: bash
 
       - name: Package as a zip
-        working-directory: ./screenshots
         run: |
-          zip --recurse-paths ../screenshots.zip .
+          Compress-Archive -Path screenshots/* -DestinationPath screenshots.zip
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
