@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Array of zoom levels
-zoom_levels=(0 1 4 -2 -6)
+zoom_levels=(0 1 4 -1 -2 -6)
 
 # Array of resolutions
 resolutions=(
