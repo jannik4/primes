@@ -135,10 +135,11 @@ fn zoom(
 }
 
 fn save_screenshot(
+    instances: Query<&InstanceMaterialData>,
+    mut wait_one_frame: Local<bool>,
     destination: Query<&HeadlessRenderDestination>,
     args: Res<Args>,
     mut app_exit: EventWriter<AppExit>,
-    mut wait_some_frames: Local<u32>,
 ) {
     let Args::Screenshot {
         width,
@@ -150,16 +151,19 @@ fn save_screenshot(
         return;
     };
 
+    if instances.iter().any(|instance| !instance.has_rendered()) {
+        return;
+    }
+    if !*wait_one_frame {
+        *wait_one_frame = true;
+        return;
+    }
+
     let Ok(destination) = destination.get_single() else {
         return;
     };
     let image = destination.0.lock().unwrap();
     if image.data.len() != 4 * (*width as usize * *height as usize) {
-        return;
-    }
-
-    *wait_some_frames += 1;
-    if *wait_some_frames < 5 {
         return;
     }
 

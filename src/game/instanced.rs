@@ -28,7 +28,10 @@ use bevy::{
 use bytemuck::{Pod, Zeroable};
 use std::{
     f32::consts::TAU,
-    sync::{Arc, OnceLock},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, OnceLock,
+    },
 };
 
 pub struct InstancedPlugin;
@@ -61,6 +64,7 @@ impl Plugin for InstancedPlugin {
 pub struct InstanceMaterialData {
     data: Arc<Vec<InstanceData>>,
     buffer: Arc<OnceLock<InstanceBuffer>>,
+    rendered: Arc<AtomicBool>,
 }
 
 impl InstanceMaterialData {
@@ -72,7 +76,12 @@ impl InstanceMaterialData {
                     .collect(),
             ),
             buffer: Arc::new(OnceLock::new()),
+            rendered: Arc::new(AtomicBool::new(false)),
         }
+    }
+
+    pub fn has_rendered(&self) -> bool {
+        self.rendered.load(Ordering::Relaxed)
     }
 }
 
@@ -85,6 +94,7 @@ impl ExtractComponent for InstanceMaterialData {
         Some(InstanceMaterialData {
             data: Arc::clone(&item.data),
             buffer: Arc::clone(&item.buffer),
+            rendered: Arc::clone(&item.rendered),
         })
     }
 }
@@ -352,6 +362,11 @@ impl<P: PhaseItem> RenderCommand<P> for DrawMeshInstanced {
                 pass.draw(0..gpu_mesh.vertex_count, 0..instance_buffer.length as u32);
             }
         }
+
+        instance_material_data
+            .rendered
+            .store(true, Ordering::Relaxed);
+
         RenderCommandResult::Success
     }
 }
