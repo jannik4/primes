@@ -51,7 +51,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let prime = f32(vertex.i_prime);
     let angle = vertex.i_angle;
 
-    let scale = 0.1 * (0.2 + (sin(2.0 * time + prime * 0.1) + 1.0) / 2.0) * zoom_scale() * (1.0 + 0.0000001 * prime);
+    let scale = 0.1 * (0.4 + 0.8 * (sin(2.0 * time + prime * 0.1) + 1.0) / 2.0) * zoom_scale() * (1.0 + 0.0000001 * prime);
     let color = vec4<f32>(
         gamma_function(1.5 + 0.5 * (sin(1.0 * time + prime * 0.0008) + 1.0) / 2.0),
         gamma_function(1.5),
