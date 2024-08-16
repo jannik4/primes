@@ -21,7 +21,7 @@ impl Default for GameCameraBundle {
                 projection: OrthographicProjection {
                     far: 1000.,
                     near: -1000.,
-                    scaling_mode: ScalingMode::FixedVertical(102.40),
+                    scaling_mode: ScalingMode::FixedVertical(100.0),
                     ..Default::default()
                 },
                 tonemapping: Tonemapping::TonyMcMapface,

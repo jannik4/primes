@@ -60,8 +60,8 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     );
 
     let position = scale * vertex.position + vec3<f32>(
-        prime * cos(angle - 0.002 * time) / 500.0,
-        prime * sin(angle - 0.002 * time) / 500.0,
+        prime * cos(angle - 0.002 * time) / 512.0,
+        prime * sin(angle - 0.002 * time) / 512.0,
         0.0,
     );
 
