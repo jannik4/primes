@@ -3,5 +3,5 @@
 use bevy::app::AppExit;
 
 fn main() -> AppExit {
-    primes::build_app().run()
+    primes::build_app(primes::Args::from_env()).run()
 }

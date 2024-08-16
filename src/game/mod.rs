@@ -1,9 +1,21 @@
 mod instanced;
 
-use crate::{assets::GameAssets, camera::GameCameraBundle, AppState};
-use bevy::{prelude::*, render::view::NoFrustumCulling};
+use crate::{assets::GameAssets, camera::GameCameraBundle, AppState, Args};
+use bevy::{
+    prelude::*,
+    render::{
+        render_asset::RenderAssetUsages,
+        render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
+        texture::BevyDefault,
+        view::NoFrustumCulling,
+    },
+};
+use bevy_headless_render::{
+    components::{HeadlessRenderBundle, HeadlessRenderDestination},
+    render_assets::HeadlessRenderSource,
+};
 use instanced::InstanceMaterialData;
-use std::time::Duration;
+use std::{fs, time::Duration};
 
 pub struct GamePlugin;
 
@@ -13,10 +25,29 @@ impl Plugin for GamePlugin {
         app.add_systems(OnEnter(AppState::Game), setup);
         app.add_systems(OnExit(AppState::Game), cleanup);
 
-        app.add_systems(Update, (game_time, zoom).run_if(in_state(AppState::Game)));
+        app.add_systems(
+            Update,
+            (game_time, zoom)
+                .run_if(mode_is_run)
+                .run_if(in_state(AppState::Game)),
+        );
+        app.add_systems(
+            Update,
+            save_screenshot
+                .run_if(mode_is_screenshot)
+                .run_if(in_state(AppState::Game)),
+        );
 
         app.add_plugins(instanced::InstancedPlugin);
     }
+}
+
+fn mode_is_run(args: Res<Args>) -> bool {
+    matches!(*args, Args::Run)
+}
+
+fn mode_is_screenshot(args: Res<Args>) -> bool {
+    matches!(*args, Args::Screenshot { .. })
 }
 
 #[derive(Debug, Resource)]
@@ -63,6 +94,12 @@ struct Zoom {
     target: f32,
 }
 
+impl Zoom {
+    fn scale(&self) -> f32 {
+        1.0 / f32::powf(2.0, self.current)
+    }
+}
+
 impl Default for Zoom {
     fn default() -> Self {
         Self {
@@ -94,13 +131,122 @@ fn zoom(
         1.0 - f32::exp(f32::ln(0.95) * 60.0 * time.delta_seconds()),
     );
 
-    projection.scale = 1.0 / f32::powf(2.0, zoom.current);
+    projection.scale = zoom.scale();
 }
 
-fn setup(mut commands: Commands, assets: Res<GameAssets>) {
-    commands.spawn((GameCameraBundle::default(), StateScoped(AppState::Game)));
-    commands.init_resource::<GameTime>();
-    commands.init_resource::<Zoom>();
+fn save_screenshot(
+    destination: Query<&HeadlessRenderDestination>,
+    args: Res<Args>,
+    mut app_exit: EventWriter<AppExit>,
+    mut wait_some_frames: Local<u32>,
+) {
+    let Args::Screenshot {
+        width,
+        height,
+        game_time,
+        game_zoom_exp,
+    } = &*args
+    else {
+        return;
+    };
+
+    let Ok(destination) = destination.get_single() else {
+        return;
+    };
+    let image = destination.0.lock().unwrap();
+    if image.data.len() != 4 * (*width as usize * *height as usize) {
+        return;
+    }
+
+    *wait_some_frames += 1;
+    if *wait_some_frames < 5 {
+        return;
+    }
+
+    let image = match image.clone().try_into_dynamic() {
+        Ok(image) => image.to_rgba8(),
+        Err(e) => panic!("Failed to create image buffer {e:?}"),
+    };
+    let image_path = format!(
+        "./screenshots/primes_{}x{}_{}_{}.png",
+        width,
+        height,
+        game_time.as_millis(),
+        game_zoom_exp,
+    );
+
+    fs::create_dir_all("./screenshots").unwrap();
+    if let Err(e) = image.save(image_path) {
+        panic!("Failed to save image: {}", e);
+    };
+
+    app_exit.send(AppExit::Success);
+}
+
+fn setup(
+    mut commands: Commands,
+    assets: Res<GameAssets>,
+    mut images: ResMut<Assets<Image>>,
+    headless_render_sources: Option<ResMut<Assets<HeadlessRenderSource>>>,
+    args: Res<Args>,
+) {
+    match &*args {
+        Args::Run => {
+            commands.spawn((GameCameraBundle::default(), StateScoped(AppState::Game)));
+            commands.init_resource::<GameTime>();
+            commands.init_resource::<Zoom>();
+        }
+        Args::Screenshot {
+            width,
+            height,
+            game_time,
+            game_zoom_exp,
+        } => {
+            let game_time = GameTime {
+                elapsed: *game_time,
+                speed_current: 1.0,
+                speed_target: 1.0,
+            };
+            let zoom = Zoom {
+                current: *game_zoom_exp as f32,
+                target: *game_zoom_exp as f32,
+            };
+
+            let mut image = Image::new_fill(
+                Extent3d {
+                    width: *width,
+                    height: *height,
+                    depth_or_array_layers: 1,
+                },
+                TextureDimension::D2,
+                &[0; 4],
+                TextureFormat::bevy_default(),
+                RenderAssetUsages::default(),
+            );
+            image.texture_descriptor.usage |= TextureUsages::COPY_SRC
+                | TextureUsages::RENDER_ATTACHMENT
+                | TextureUsages::TEXTURE_BINDING;
+            let image_handle = images.add(image);
+
+            let mut game_camera_bundle = GameCameraBundle::default();
+            game_camera_bundle.camera.camera.target = image_handle.clone().into();
+            game_camera_bundle.camera.projection.scale = zoom.scale();
+
+            commands.spawn((
+                game_camera_bundle,
+                HeadlessRenderBundle {
+                    source: headless_render_sources
+                        .unwrap()
+                        .add(HeadlessRenderSource(image_handle)),
+                    dest: HeadlessRenderDestination::default(),
+                },
+                StateScoped(AppState::Game),
+            ));
+
+            commands.insert_resource(game_time);
+            commands.insert_resource(zoom);
+        }
+    }
 
     commands.spawn((
         assets.circle.clone(),

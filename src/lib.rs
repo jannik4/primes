@@ -8,29 +8,77 @@ mod game;
 mod primes;
 mod splash_screen;
 
-use bevy::prelude::*;
+use bevy::{
+    app::{RunMode, ScheduleRunnerPlugin},
+    prelude::*,
+    winit::WinitPlugin,
+};
 use bevy_asset_loader::loading_state::{LoadingState, LoadingStateAppExt};
+use std::time::Duration;
 
-pub fn build_app() -> App {
+#[derive(Debug, Resource)]
+pub enum Args {
+    Run,
+    Screenshot {
+        width: u32,
+        height: u32,
+        game_time: Duration,
+        game_zoom_exp: i32,
+    },
+}
+
+impl Args {
+    pub fn from_env() -> Self {
+        let mut args = pico_args::Arguments::from_env();
+        match args.subcommand().unwrap().as_deref() {
+            Some("run") | None => Self::Run,
+            Some("screenshot") => Self::Screenshot {
+                width: args.value_from_str("--width").unwrap_or(1920),
+                height: args.value_from_str("--height").unwrap_or(1080),
+                game_time: Duration::from_millis(args.value_from_str("--time").unwrap_or(0)),
+                game_zoom_exp: args.value_from_str("--zoom").unwrap_or(0),
+            },
+            _ => panic!("Invalid subcommand"),
+        }
+    }
+}
+
+pub fn build_app(args: Args) -> App {
     let mut app = App::new();
 
-    app.add_plugins(
-        DefaultPlugins
-            .set(AssetPlugin {
-                #[cfg(target_arch = "wasm32")]
-                meta_check: bevy::asset::AssetMetaCheck::Never,
-                ..default()
-            })
-            .set(WindowPlugin {
-                primary_window: Some(Window {
-                    fit_canvas_to_parent: true,
-                    present_mode: bevy::window::PresentMode::AutoNoVsync,
-                    ..default()
-                }),
+    let default_plugins = DefaultPlugins.set(AssetPlugin {
+        #[cfg(target_arch = "wasm32")]
+        meta_check: bevy::asset::AssetMetaCheck::Never,
+        ..default()
+    });
+    let default_plugins = match &args {
+        Args::Run => default_plugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                fit_canvas_to_parent: true,
+                present_mode: bevy::window::PresentMode::AutoNoVsync,
                 ..default()
             }),
-    )
-    .insert_resource(ClearColor(Color::srgb(0.02, 0.02, 0.02)));
+            ..default()
+        }),
+        Args::Screenshot { .. } => default_plugins.disable::<WinitPlugin>(),
+    };
+
+    app.add_plugins(default_plugins)
+        .insert_resource(ClearColor(Color::srgb(0.02, 0.02, 0.02)));
+
+    match &args {
+        Args::Run => (),
+        Args::Screenshot { .. } => {
+            app.add_plugins((
+                ScheduleRunnerPlugin {
+                    run_mode: RunMode::Loop { wait: None },
+                },
+                bevy_headless_render::HeadlessRenderPlugin,
+            ));
+        }
+    }
+
+    app.insert_resource(args);
 
     app.init_state::<AppState>()
         .enable_state_scoped_entities::<AppState>()
