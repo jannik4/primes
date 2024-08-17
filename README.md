@@ -8,14 +8,19 @@ Visit the Live Demo [here](https://jannik4.github.io/primes/).
 
 ## Controls
 
-- Zoom in: <kbd>&uarr;</kbd>
-- Zoom out: <kbd>&darr;</kbd>
-- Reset zoom: <kbd>Space</kbd>
+- **Zoom in**: <kbd>&uarr;</kbd>
+- **Zoom out**: <kbd>&darr;</kbd>
+- **Reset zoom**: <kbd>Space</kbd>
 
 <!---->
 
-- Increase speed: <kbd>Ctrl</kbd> / <kbd>Shift</kbd>
-- Reset time: <kbd>R</kbd>
+- **Increase speed**: <kbd>Ctrl</kbd> / <kbd>Shift</kbd>
+- **Reset time**: <kbd>R</kbd>
+
+<!---->
+
+- **Fullscreen**: <kbd>F11</kbd>
+- **Display FPS**: <kbd>F12</kbd>
 
 ## Screenshots
 
